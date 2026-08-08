@@ -67,5 +67,140 @@ void buscarProdutoMaiorValorArmazenado();
 
 // FUNÇÃO MAIN
 int main() {
-    
+    int opcao;
+
+    do {
+        printf("\n====================================\n");
+        printf("   SISTEMA DE CONTROLE DE ESTOQUE   \n");
+        printf("====================================\n");
+        printf("1. Cadastrar produto\n");
+        printf("17. Sair\n");
+        printf("====================================\n");
+        printf("Escolha uma opção: ");
+        scanf("%d", &opcao);
+
+        switch (opcao) {
+            case 1:
+                cadastrarProduto(); 
+                break;
+            case 17:
+                printf("\nEncerrando o programa...\n");
+                break;
+            default:
+                printf("\nOpção inválida! Tente novamente.\n");
+        }
+
+    } while (opcao != 17);
+
+    return 0;
+}
+
+// vai percorrer o vetor estoque pra achar o produto e retornar seu indice 
+// se não achar (-1)
+int buscarIndicePorCodigo(int codigo) {
+    for (int i = 0; i < total_produtos; i++) {
+        if (estoque[i].codigo == codigo) {
+            return i; 
+        }
+    }
+    return -1; 
+}
+
+// Retorna 1 se a categoria for valida e 0 se for invalida
+int validarCategoria(const char *cat) {
+    for (int i = 0; i < MAX_CATEGORIAS; i++) {
+        // strcmp retorna 0 se as duas palavras forem EXATAMENTE iguais
+        if (strcmp(cat, CATEGORIAS_VALIDAS[i]) == 0) {
+            return 1; // Encontrou uma correspondencia valida
+        }
+    }
+    return 0; // Nao encontrou na lista de validas
+}
+void cadastrarProduto(){
+
+    printf("\n--- CADASTRO DE PRODUTO ---\n");
+
+    if (total_produtos >= MAX_PRODUTOS) {
+        printf("Erro: Limite maximo de 200 produtos atingido!\n");
+        return;
+
+}
+// variavel temp pra ler dados do novo produto
+Produto p; 
+
+getchar(); // limpa o Enter que ficou no teclado após escolher a opção no main
+
+printf("\nDigite o codigo do produto: ");
+    scanf("%d", &p.codigo);
+
+getchar(); // pra limpar o enter do código para não atrapalhar o fgets do nome
+
+// validação código único, não pode ter repetido
+if (buscarIndicePorCodigo(p.codigo) != -1) {
+        printf("\nErro: O codigo %d ja esta cadastrado!\n", p.codigo);
+        return;
+}
+
+do {
+        printf("\nDigite o nome do produto: ");
+        fgets(p.nome, 100, stdin);
+        p.nome[strcspn(p.nome, "\n")] = '\0';
+
+        if (strlen(p.nome) == 0) {
+            printf("Erro: O nome do produto e obrigatorio!\n");
+        }
+    } while (strlen(p.nome) == 0);
+
+do {
+        printf("Digite a categoria: ");
+        fgets(p.categoria, 50, stdin);
+        p.categoria[strcspn(p.categoria, "\n")] = '\0';
+
+        if (!validarCategoria(p.categoria)) {
+            printf("\nErro: Categoria invalida! As categorias aceitas sao:\n");
+            for (int i = 0; i < MAX_CATEGORIAS; i++) {
+                printf(" - %s\n", CATEGORIAS_VALIDAS[i]);
+            }
+            printf("\n");
+        }
+    } while (!validarCategoria(p.categoria));
+
+// Quantidade inicial nao pode ser negativa (Item 5 PDF)  / utilizando do while pra repetir ate a pessoa digitar o certo
+    do {
+        printf("Digite a quantidade inicial: ");
+        scanf("%d", &p.qtd_disponivel);  // da pasta produtos, adiciona a qntd disponivel
+
+        if (p.qtd_disponivel < 0) {              // se a qntd disponivel do produto for negativa da erro
+            printf("Erro: A quantidade nao pode ser negativa!\n");
+        }
+    } while (p.qtd_disponivel < 0);
+
+    // Quantidade minima nao pode ser negativa (Item 5 PDF)
+    do {
+        printf("Digite a quantidade minima recomendada: ");
+        scanf("%d", &p.qtd_minima);
+
+        if (p.qtd_minima < 0) {
+            printf("Erro: A quantidade minima nao pode ser negativa!\n");
+        }
+    } while (p.qtd_minima < 0);
+
+    // Valor unitario deve ser maior que zero (Item 5 PDF)
+    do {
+        printf("Digite o valor unitario (R$): ");
+        scanf("%f", &p.valor_unitario);
+
+        if (p.valor_unitario <= 0) {
+            printf("Erro: O valor deve ser maior que zero!\n");
+        }
+    } while (p.valor_unitario <= 0);
+
+    // Situacao inicial padrao: 1 (Ativo)
+    p.situacao = 1;
+
+    // Guarda o produto no vetor na posicao 'total_produtos'
+    estoque[total_produtos] = p;
+    total_produtos++; // Incrementa o contador de produtos cadastrados
+
+    printf("\n>>> SUCESSO: Produto cadastrado com exito! <<<\n");
 }
