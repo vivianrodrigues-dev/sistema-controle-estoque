@@ -204,3 +204,60 @@ do {
 
     printf("\n>>> SUCESSO: Produto cadastrado com exito! <<<\n");
 }
+
+
+// Função auxiliar sua para não repetir printf grande em várias funções
+void exibirLinhaProduto(Produto p){
+    char sitStr[25];
+    if (p.situacao == 1)strcpy(sitStr, "Ativo");
+    else if (p.situacao == 2) strcpy(sitStr, "Indisponivel");
+    else strcpy(sitStr, "Descontinuado");
+
+    printf("Cod: %d | Nome: %s | Cat: %s | Qtd: %d | Val Unit: R$ %.2f | Sit: %s\n", 
+           p.codigo, p.nome, p.categoria, p.qtd_disponivel, p.valor_unitario, sitStr);
+}
+void exibirValorIndividualEstoque(){
+    if (total_produtos == 0){ // Verifica se tem produtos cadastrados
+        printf("\nNenhum produto cadastrado.\n");
+        return;
+    }
+    printf("\n--- VALOR INDIVIDUAL DE CADA PRODUTO EM ESTOQUE ---\n");
+    for (int i = 0; i < total_produtos; i++){ // Percorre o vetor de produtos, ou seja, todos os produtos cadastrados
+        float valor_total = estoque[i].qtd_disponivel * estoque[i].valor_unitario; // Cria uma variável local e calcula o patrimônio daquele item multiplicando a quantidade em estoque pelo preço de custo unitário.
+        exibirLinhaProduto(estoque[i]);
+    }
+}
+void calcularValorTotalEstoque(){
+    float soma_total = 0.0;
+    for (int i = 0; i < total_produtos; i++){ // Percorre o vetor de produtos, ou seja, todos os produtos cadastrados
+        soma_total += estoque[i].qtd_disponivel * estoque[i].valor_unitario; // Multiplica a quantidade pelo preço do produto atual e soma ao valor total acumulado
+    }
+    printf("\nVALOR TOTAL DE TODOS OS PRODUTOS EM ESTOQUE: R$ %.2f\n", soma_total);
+}
+void consultarProdutosSemEstoque(){
+    int encontrados = 0;
+    printf("\n--- PRODUTOS SEM ESTOQUE ---\n");
+    for (int i = 0; i < total_produtos; i++){ // Percorre o vetor de produtos, ou seja, todos os produtos cadastrados
+        if (estoque[i].qtd_disponivel == 0){ // Verifica se a quantidade em estoque é igual a zero
+            exibirLinhaProduto(estoque[i]);
+            encontrados++; // Soma 1 ao contador de produtos encontrados sem estoque
+        }
+    }
+    if (encontrados == 0){ // Verifica se o contador de produtos encontrados sem estoque é igual a zero, ou seja, não encontrou nenhum produto sem estoque
+        printf("\nNenhum produto encontrado sem estoque.\n");
+    }
+}
+void consultarProdutosAbaixoDoMinimo(){
+    int encontrados = 0;
+    printf("\n--- PRODUTOS ABAIXO DA QUANTIDADE MÍNIMA ---\n");
+    for (int i = 0; i < total_produtos; i++){ // Percorre o vetor de produtos, ou seja, todos os produtos cadastrados
+        if (estoque[i].qtd_disponivel < estoque[i].qtd_minima){ // Varre o estoque e compara se a quantidade atual está menor do que a quantidade mínima configurada no cadastro
+            exibirLinhaProduto(estoque[i]);
+            printf("Quantidade mínima recomendada: %d\n", estoque[i].qtd_minima); // Se o produto estiver em nível crítico, informa qual era o limite mínimo aceitável
+            encontrados++; // Soma 1 ao contador de produtos encontrados abaixo da quantidade mínima
+        }
+    }
+    if (encontrados == 0){ // Verifica se o contador de produtos encontrados abaixo da quantidade mínima é igual a zero, ou seja, não encontrou nenhum produto abaixo do limite mínimo
+        printf("\nNenhum produto encontrado abaixo da quantidade mínima.\n");
+    }
+}
