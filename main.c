@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h> // Necessário para a função tolower()
 
 // Limites do sistema exigidos (PDF)
 #define MAX_PRODUTOS 200
@@ -39,7 +40,6 @@ typedef struct {
 
 FILE* inicializarArquivo(const char *cherieBelle);
 // PROTÓTIPOS DAS FUNÇÕES
-int buscarIndicePorCodigo(int codigo);
 int validarCategoria(const char *cat);
 int produtoEstaAtivo(FILE *fPtr, int codigo);
 void exibirMenuPrincipal();
@@ -97,9 +97,9 @@ int main(void) {
         printf("16. Relatorio de Totais por Categoria\n");
         printf("17. Ordenar Produtos por Valor Unitario\n");
         printf("18. Calcular Valor Total do Estoque Geral\n");
-        printf("\n 19. Sair do Sistema\n");
+        printf("\n19. Sair do Sistema\n");
         printf("====================================\n");
-        printf("Escolha uma opção: ");
+        printf("Escolha uma opcao: ");
         scanf("%d", &opcao);
 
         switch (opcao) {
@@ -109,12 +109,12 @@ int main(void) {
             case 2:
                 listarTodosProdutos(cfPtr);
                 break;
-            case 3:
-                alterarProduto(cfPtr);
-                break;
-            case 4:
-                excluirOuDescontinuarProduto(cfPtr);
-                break;
+            //case 3:
+               // alterarProduto(cfPtr);
+               // break;
+            //case 4:
+               // excluirOuDescontinuarProduto(cfPtr);
+               // break;
             case 5:
                 consultarProdutoPorCodigo(cfPtr);
                 break;
@@ -124,35 +124,35 @@ int main(void) {
             case 7:
                 consultarProdutosPorSituacao(cfPtr);
                 break;
-            case 8:
-                consultarProdutosPorCategoria(cfPtr);
-                break;
+           // case 8:
+                //consultarProdutosPorCategoria(cfPtr);
+               // break;
             case 9:
                 consultarProdutosAbaixoDoMinimo(cfPtr);
                 break;
             case 10:
                 consultarProdutosSemEstoque(cfPtr);
                 break;
-            case 11:
-                buscarProdutoMaiorValorUnitario(cfPtr);
-                break;
-            case 12:
-                buscarProdutoMaiorValorArmazenado(cfPtr);
-                break;
+            //case 11:
+               // buscarProdutoMaiorValorUnitario(cfPtr);
+               // break;
+           //case 12:
+               // buscarProdutoMaiorValorArmazenado(cfPtr);
+                //break;
             case 13:
                 exibirValorIndividualEstoque(cfPtr);
                 break;
-            case 14:
-                ordenarProdutosPorNome(cfPtr);
-                break;
-            case 15:
-                ordenarProdutosPorQuantidade(cfPtr);
-                break;
-            case 16:
-                relatorioPorCategoria(cfPtr);
-                break;
-            case 17:
-                ordenarProdutosPorValorUnitario(cfPtr);
+            //case 14:
+                //ordenarProdutosPorNome(cfPtr);
+               // break;
+            //case 15:
+                //ordenarProdutosPorQuantidade(cfPtr);
+               // break;
+            //case 16:
+               // relatorioPorCategoria(cfPtr);
+               // break;
+            //case 17:
+                //ordenarProdutosPorValorUnitario(cfPtr);
                 break;
             case 18:
                 calcularValorTotalEstoque(cfPtr);
@@ -161,10 +161,10 @@ int main(void) {
                 printf("\nEncerrando o programa...\n");
                 break;
             default:
-                printf("\nOpção inválida! Tente novamente.\n");
+                printf("\nOpcao inválida! Tente novamente.\n");
         }
 
-    } while (opcao != 18);
+    } while (opcao != 19);
 
     fclose(cfPtr);
     return 0;
@@ -257,41 +257,69 @@ int produtoEstaAtivo(FILE *fPtr, int codigo) {
     return (p.codigo != 0 && p.situacao == 1);
 }
 
+// Função auxiliar: converte textos para minúsculo para busca parcial e case-insensitive
+int contemSubpalavra(const char *texto, const char *busca) {
+    char tempTexto[100]; // Vetor local temporário para armazenar a cópia do texto em minúsculas
+    char tempBusca[100]; // Vetor local temporário para armazenar a cópia do termo buscado em minúsculas
+    int i = 0;
+
+    // onverte caractere por caractere de 'texto' para minúsculo até encontrar o fim da string ('\0')
+    while (texto[i] != '\0' && i < 99) {
+        tempTexto[i] = (char)tolower((unsigned char)texto[i]);
+        i++;
+        // (unsigned char): Garante a conversão correta de caracteres acentuados/especiais sem dar erro de sinal
+        // tolower(): Função que recebe um caractere maiúsculo e o transforma em minúsculo 
+        // (char): Converte o retorno numérico do tolower de volta para o tipo caractere
+    }
+    tempTexto[i] = '\0'; // Adiciona o caractere nulo terminador no final para fechar a string em C
+
+    // Converte o termo buscado para minúsculas
+    i = 0;
+    while (busca[i] != '\0' && i < 99) {
+        tempBusca[i] = (char)tolower((unsigned char)busca[i]);
+        i++;
+    }
+    tempBusca[i] = '\0';
+    // strstr(tempTexto, tempBusca): Função da biblioteca <string.h> que procura a subpalavra 'tempBusca' dentro de 'tempTexto'.
+    // - Se encontrar: Retorna o ponteiro com a posição da memória onde a subpalavra começa.
+    // - Se NÃO encontrar: Retorna NULL (ponteiro nulo).
+    // (strstr(...) != NULL): resulta em 1 se encontrou, ou 0 se não encontrou.
+    // Retorna 1 se encontrar a subpalavra no texto (strstr) ou 0 se não encontrar
+    return (strstr(tempTexto, tempBusca) != NULL);
+}
+
 void cadastrarProduto(FILE *fPtr){
 
     printf("\n--- CADASTRO DE PRODUTO ---\n");
     int codigo;
+    Produto p;
+    int codigoValido = 0;
+    
+do{
     printf("\nDigite o codigo do produto (1 a %d): ", MAX_PRODUTOS);
     scanf("%d", &codigo);
     limparBuffer();
-
+    
     if (codigo < 1 || codigo > MAX_PRODUTOS) {
         printf("Erro: O codigo fora do limite permitido (1 a %d)!", MAX_PRODUTOS);
-        return;
-    //if (total_produtos >= MAX_PRODUTOS) {
-        //printf("Erro: Limite maximo de 200 produtos atingido!\n");
-        //return;
+    }else {
 
-}
+    // Posiciona o ponteiro do arquivo na posicao exata do codigo
+    fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET); //o próprio número do código do produto é a posição dele no arquivo
+    // variavel temp pra ler dados do novo produto
+    fread(&p, sizeof(Produto), 1, fPtr);
 
-// Posiciona o ponteiro do arquivo na posicao exata do codigo
-fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET);
-// variavel temp pra ler dados do novo produto
-Produto p; 
-fread(&p, sizeof(Produto), 1, fPtr);
-
-// Se a posicao ja possui um codigo registrado, aborta (Verificacao de Duplicidade)
-if (p.codigo != 0) {
+    // Se a posicao ja possui um codigo registrado, aborta (Verificacao de Duplicidade)
+    if (p.codigo != 0) {
     printf("\nErro: O codigo %d ja esta cadastrado pra outro produto!\n", codigo);
-    return;
+} else {
+    // Se passou nos dois testes, o código é válido e a posição está livre!
+    codigoValido = 1;
+        }
     }
- 
+} while (!codigoValido);
+
 p.codigo = codigo;
-// validação código único, não pode ter repetido
-if (buscarIndicePorCodigo(p.codigo) != -1) {
-        printf("\nErro: O codigo %d ja esta cadastrado!\n", p.codigo);
-        return;
-}
 
 do {
         printf("\nNome do produto: ");
@@ -402,9 +430,10 @@ void calcularValorTotalEstoque(FILE *fPtr){
         if (p.codigo != 0) {
         soma_total += (p.qtd_disponivel * p.valor_unitario); // Multiplica a quantidade pelo preço do produto atual e soma ao valor total acumulado
     }
+}
     printf("\n=======================================================\n");
     printf("\nVALOR TOTAL DE TODOS OS PRODUTOS EM ESTOQUE: R$ %.2f\n", soma_total);
-}   printf("\n=======================================================\n");
+    printf("\n=======================================================\n");
 }
 void consultarProdutosSemEstoque(FILE *fPtr){
     printf("\n--- PRODUTOS SEM ESTOQUE ---\n");
@@ -438,5 +467,170 @@ void consultarProdutosAbaixoDoMinimo(FILE *fPtr){
     }
     if (encontrados == 0){ // Verifica se o contador de produtos encontrados abaixo da quantidade mínima é igual a zero, ou seja, não encontrou nenhum produto abaixo do limite mínimo
         printf("\nNenhum produto encontrado abaixo da quantidade mínima.\n");
+    }
+    
+}
+
+ // Utiliza a chave primária (código) para calcular a posição exata
+ // no arquivo binário usando fseek(), permitindo busca em tempo O(1).
+
+void consultarProdutoPorCodigo(FILE *fPtr) {
+    printf("\n--- CONSULTA DE PRODUTO POR CÓDIGO ---\n");
+    int codigo;
+
+    printf("Digite o codigo do produto (1 a %d): ", MAX_PRODUTOS);
+    if (scanf("%d", &codigo) != 1) {
+        limparBuffer(); // Chama a função de limpar o buffer do teclado para remover caracteres inválidos
+        printf("\nErro: Entrada invalida!\n");
+        return;
+    }
+    limparBuffer(); // Limpa o caractere '\n' 
+
+    // Validação dos limites do arquivo (exigido no PDF Item 3 e 13)
+    if (codigo < 1 || codigo > MAX_PRODUTOS) {
+        printf("\nErro: Codigo fora do limite permitido (1 a %d)!\n", MAX_PRODUTOS);
+        return;
+    }
+
+    // fseek(fPtr, offset, origem): Movimenta o ponteiro de leitura/escrita do arquivo para uma posição específica.
+    // - fPtr: ponteiro do arquivo aberto "produtos.dat".
+    // - (long)(codigo - 1) * sizeof(Produto): O deslocamento em bytes. Como o código 1 fica no byte 0 (primeira posição),
+    //   subtraímos 1 do código e multiplicamos pelo tamanho da struct Produto em bytes.
+    // - SEEK_SET: Constante que indica que a contagem dos bytes deve começar do INÍCIO do arquivo.
+    
+    fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET);
+
+    Produto p; // Declara variável do tipo 'Produto' na RAM para armazenar temporariamente o registro lido do disco
+
+    // fread(destino, tamanho, quantidade, ponteiro_arquivo): Lê dados binários do arquivo.
+    // - &p: Endereço de memória da variável 'p' onde os dados lidos do disco serão gravados.
+    // - sizeof(Produto): O tamanho em bytes da estrutura de dados Produto.
+    // - 1: Especifica que queremos ler exatamente 1 bloco/registro por vez.
+    // - fPtr: O arquivo de onde os bytes serão lidos.
+
+    fread(&p, sizeof(Produto), 1, fPtr);
+
+    // Se codigo == 0, a posição está vazia no arquivo
+    if (p.codigo == 0) {
+        printf("\nNenhum produto cadastrado com o codigo %d.\n", codigo);
+    } else {
+        printf("\n================ PRODUTO ENCONTRADO ================\n");
+        exibirLinhaProduto(p);
+        printf(" -> Qtd Minima Recomendada: %d unidades\n", p.qtd_minima);
+        printf(" -> Valor Total Armazenado: R$ %.2f\n", p.qtd_disponivel * p.valor_unitario);
+        printf("===================================================\n");
+    }
+}
+
+// Varre todo o arquivo sequencialmente (fread) buscando produtos cujos
+//nomes contenham o termo digitado pelo usuário (total ou parcialmente).
+
+void consultarProdutoPorNome(FILE *fPtr) {
+    printf("\n--- CONSULTA DE PRODUTO POR NOME ---\n");
+    char termoBusca[100];
+
+    // fgets(destino, tamanho_maximo, fluxo_entrada): Lê uma linha inteira de texto com segurança.
+    // - termoBusca: Onde a string digitada será gravada.
+    // - sizeof(termoBusca): Limite de leitura (100 bytes) para evitar o estouro de memória (buffer overflow).
+    // - stdin: Abreviação de "Standard Input", representa a entrada padrão do teclado.
+
+    printf("Digite o nome ou parte do nome do produto: ");
+    fgets(termoBusca, sizeof(termoBusca), stdin);
+
+    // strcspn(termoBusca, "\n"): Procura o índice do caractere de quebra de linha '\n' deixado pelo Enter ao usar fgets.
+    // termoBusca[...] = '\0': Substitui a quebra de linha pelo caractere nulo '\0', que finaliza a string corretamente.
+    termoBusca[strcspn(termoBusca, "\n")] = '\0'; // Remove o \n capturado pelo fgets
+
+    // Validação do campo de busca (Item 13)
+    // strlen(termoBusca): Retorna a quantidade de caracteres da string.
+    // Se for igual a 0, significa que o usuário apenas apertou Enter sem digitar nenhuma letra.
+    if (strlen(termoBusca) == 0) {
+    if (strlen(termoBusca) == 0) {
+        printf("\nErro: O termo de busca nao pode ser vazio!\n");
+        return;
+    }
+
+    // Reposiciona o ponteiro para o início do arquivo antes de iniciar a varredura
+    // rewind(fPtr): Reposiciona o ponteiro de leitura do arquivo no início do arquivo (byte 0).
+    // É o equivalente a chamar fseek(fPtr, 0, SEEK_SET).
+    rewind(fPtr);
+
+    Produto p;
+    int encontrados = 0;
+
+    printf("\n--- RESULTADOS PARA \"%s\" ---\n", termoBusca);
+
+    // Varre todos os registros do arquivo sequencialmente
+    // fread(...) == 1: O laço while continua executando enquanto a função fread conseguir ler com sucesso
+    // exatamente 1 registro do tipo Produto do arquivo binário. Quando chegar ao fim do arquivo (EOF), fread retorna 0 e o laço para
+    while (fread(&p, sizeof(Produto), 1, fPtr) == 1) {
+        // Ignora posições vazias (p.codigo == 0) e verifica se bate com a busca
+        // 1ª Validação (p.codigo != 0): Garante que a posição não seja um registro em branco/vazio do arquivo.
+        // 2ª Validação (contemSubpalavra(p.nome, termoBusca)): Chama a função auxiliar para testar se o termo digitado está no nome
+        if (p.codigo != 0 && contemSubpalavra(p.nome, termoBusca)) {
+            exibirLinhaProduto(p);
+            encontrados++;
+        }
+    }
+
+    if (encontrados == 0) {
+        printf("Nenhum produto encontrado contendo \"%s\" no nome.\n", termoBusca);
+    } else {
+        printf("Total de registros encontrados: %d\n", encontrados);
+    }
+}
+}
+
+// Solicita ao usuário qual situação filtrar (1 = Ativo, 2 = Indisponível,
+// 3 = Descontinuado) e percorre o arquivo listando apenas os correspondentes.
+ 
+void consultarProdutosPorSituacao(FILE *fPtr) {
+    printf("\n--- CONSULTA DE PRODUTOS POR SITUAÇÃO ---\n");
+    printf(" Escolha a situacao desejada:\n");
+    printf(" 1. Ativo\n");
+    printf(" 2. Temporariamente Indisponivel\n");
+    printf(" 3. Descontinuado\n");
+    printf("Opcao: ");
+
+    int situacaoDesejada;
+    if (scanf("%d", &situacaoDesejada) != 1) {
+        limparBuffer(); // Limpa entradas incorretas
+        printf("\nErro: Opcao invalida!\n");
+        return;
+    }
+    limparBuffer();
+
+    // Validação da opção informada pelo usuário (Item 13)
+    if (situacaoDesejada < 1 || situacaoDesejada > 3) {
+        printf("\nErro: Situacao invalida! Escolha apenas entre 1, 2 ou 3.\n");
+        return;
+    }
+
+    // Reposiciona o ponteiro para o início do arquivo
+    rewind(fPtr);
+
+    Produto p;
+    int encontrados = 0;
+
+    // Vetor de ponteiros para string que mapeia a posição numérica no texto do cabeçalho
+    // Posição 1 = "ATIVO", Posição 2 = "INDISPONÍVEL", Posição 3 = "DESCONTINUADO"
+    const char *rotulosSituacao[] = {"", "ATIVO", "INDISPONÍVEL", "DESCONTINUADO"};
+    printf("\n--- PRODUTOS NA SITUAÇÃO: %s ---\n", rotulosSituacao[situacaoDesejada]);
+
+    // Percorre todos os registros do arquivon do início ao fim lendo 1 bloco por vez
+    while (fread(&p, sizeof(Produto), 1, fPtr) == 1) {
+        // Filtra posições ativas e que correspondam à situação escolhida
+        // p.codigo != 0: Garante que é um registro ocupado no arquivo.
+        // Compara a situação do produto atual com a solicitada pelo usuário.
+        if (p.codigo != 0 && p.situacao == situacaoDesejada) {
+            exibirLinhaProduto(p);
+            encontrados++;
+        }
+    }
+
+    if (encontrados == 0) {
+        printf("Nenhum produto encontrado com a situacao \"%s\".\n", rotulosSituacao[situacaoDesejada]);
+    } else {
+        printf("Total de produtos encontrados nesta situacao: %d\n", encontrados);
     }
 }
