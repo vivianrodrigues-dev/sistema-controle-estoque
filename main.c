@@ -41,7 +41,13 @@ typedef struct {
 FILE* inicializarArquivo(const char *cherieBelle);
 // PROTÓTIPOS DAS FUNÇÕES
 int validarCategoria(const char *cat);
+int stringEstaEmBranco(const char *str); // PROFESSOR FALOU NO MEET
+void selecionarCategoria(char *destino);
 int produtoEstaAtivo(FILE *fPtr, int codigo);
+void limparBuffer(void);
+void paraMinusculo(char *str); // dxar padrão desde o cadastro
+int contemSubpalavra(const char *texto, const char *busca); 
+void exibirLinhaProduto(Produto p);
 void exibirMenuPrincipal();
 
 //  Funções (protótipos): Vívian 
@@ -100,7 +106,12 @@ int main(void) {
         printf("\n19. Sair do Sistema\n");
         printf("====================================\n");
         printf("Escolha uma opcao: ");
-        scanf("%d", &opcao);
+        if (scanf("%d", &opcao) != 1) {
+            limparBuffer();
+            opcao = 0; // Força cair no 'default' (Opção inválida)
+        } else {
+            limparBuffer(); // Consome o '\n' deixado pelo scanf
+}
 
         switch (opcao) {
             case 1:
@@ -124,7 +135,7 @@ int main(void) {
             case 7:
                 consultarProdutosPorSituacao(cfPtr);
                 break;
-           // case 8:
+            //case 8:
                 //consultarProdutosPorCategoria(cfPtr);
                // break;
             case 9:
@@ -142,18 +153,18 @@ int main(void) {
             case 13:
                 exibirValorIndividualEstoque(cfPtr);
                 break;
-            //case 14:
-                //ordenarProdutosPorNome(cfPtr);
-               // break;
-            //case 15:
-                //ordenarProdutosPorQuantidade(cfPtr);
-               // break;
+            case 14:
+                ordenarProdutosPorNome(cfPtr);
+                break;
+            case 15:
+                ordenarProdutosPorQuantidade(cfPtr);
+                break;
             //case 16:
                // relatorioPorCategoria(cfPtr);
                // break;
             //case 17:
                 //ordenarProdutosPorValorUnitario(cfPtr);
-                break;
+               // break;
             case 18:
                 calcularValorTotalEstoque(cfPtr);
                 break;
@@ -204,6 +215,58 @@ void limparBuffer(void) {
     while ((c = getchar()) != '\n' && c != EOF);
 }
 
+// Converte uma string inteira para minusculas
+void paraMinusculo(char *str) {
+    for (int i = 0; str[i] != '\0'; i++) {
+        str[i] = (char)tolower((unsigned char)str[i]);
+    }
+}
+// Retorna 1 se a string for vazia ou contiver apenas espaços em branco
+int stringEstaEmBranco(const char *str) {
+    while (*str) {
+        if (!isspace((unsigned char)*str)) return 0;
+        str++;
+    }
+    return 1;
+}
+
+// Exibe o menu de categorias e atribui a escolha por código 
+// Exibe o menu de categorias e atribui a escolha por código 
+void selecionarCategoria(char *destino) {
+    int catOpcao = 0;
+
+    // 1. Imprime a lista de categorias apenas UMA VEZ no início
+    printf("\n--- SELEÇÃO DE CATEGORIA ---\n");
+    for (int i = 0; i < MAX_CATEGORIAS; i++) {
+        printf(" %2d. %s\n", i + 1, CATEGORIAS_VALIDAS[i]);
+    }
+    printf("----------------------------\n");
+
+    do {
+        printf("Escolha o codigo da categoria (1 a %d): ", MAX_CATEGORIAS);
+        fflush(stdout);
+        
+        // Validação se a pessoa digitou letras/símbolos
+        if (scanf("%d", &catOpcao) != 1) {
+            limparBuffer();
+            printf("\n>>> Erro: Digite apenas numeros inteiros! <<<\n\n");
+            fflush(stdout);
+            catOpcao = 0; // Força continuar no laço
+            continue;
+        }
+        limparBuffer();
+
+        // Validação se o número está fora do intervalo (1 a 12)
+        if (catOpcao < 1 || catOpcao > MAX_CATEGORIAS) {
+            printf("\n>>> Erro: Opcao invalida! Escolha um codigo entre 1 e %d. <<<\n\n", MAX_CATEGORIAS);
+            fflush(stdout);
+        }
+
+    } while (catOpcao < 1 || catOpcao > MAX_CATEGORIAS);
+
+    // Copia o nome da categoria para o produto
+    strcpy(destino, CATEGORIAS_VALIDAS[catOpcao - 1]);
+}
 // Retorna 1 se a categoria for valida e 0 se for invalida
 int validarCategoria(const char *cat) {
     for (int i = 0; i < MAX_CATEGORIAS; i++) {
@@ -231,12 +294,10 @@ int produtoExisteNoArquivo(FILE *fPtr, int codigo) {
     if (codigo < 1 || codigo > MAX_PRODUTOS) {
         return 0; // Código fora do limite (1 a 200)
     }
-
     // Posiciona e lê o registro diretamente no disco
     fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET);
     Produto p;
     fread(&p, sizeof(Produto), 1, fPtr);
-
     // Se o código for diferente de 0, a posição está ocupada
     return (p.codigo != 0);
 }
@@ -326,39 +387,49 @@ do {
         fgets(p.nome, 100, stdin);
         p.nome[strcspn(p.nome, "\n")] = '\0';
 
-        if (strlen(p.nome) == 0) {
+        if (stringEstaEmBranco(p.nome)) {
             printf("Erro: O nome do produto e obrigatorio!\n");
         }
-    } while (strlen(p.nome) == 0);
+    } while (stringEstaEmBranco(p.nome));
 
-do {
-        printf("Categoria do produto: ");
-        fgets(p.categoria, 50, stdin);
-        p.categoria[strcspn(p.categoria, "\n")] = '\0';
+// Converte o nome do produto para minúsculo como padrão
+    paraMinusculo(p.nome);
+// Seleção da Categoria por Código
+    selecionarCategoria(p.categoria);
 
-        if (!validarCategoria(p.categoria)) {
-            printf("\nErro: Categoria invalida! As categorias aceitas sao:\n");
-            for (int i = 0; i < MAX_CATEGORIAS; i++) {
-                printf(" - %s\n", CATEGORIAS_VALIDAS[i]);
-            }
-            printf("\n");
-        }
-    } while (!validarCategoria(p.categoria));
 
 // Quantidade inicial nao pode ser negativa (Item 5 PDF)  / utilizando do while pra repetir ate a pessoa digitar o certo
     do {
         printf("Quantidade disponivel em estoque: ");
-        scanf("%d", &p.qtd_disponivel);  // da pasta produtos, adiciona a qntd disponivel
+        if (scanf("%d", &p.qtd_disponivel) != 1) {  // da pasta produtos, adiciona a qntd disponivel
+            limparBuffer();
+            printf("Erro: Digite um numero inteiro valido!\n");
+            p.qtd_disponivel = -1;
+            continue;
+        }
+        limparBuffer(); 
 
         if (p.qtd_disponivel < 0) {              // se a qntd disponivel do produto for negativa da erro
             printf("Erro: A quantidade nao pode ser negativa!\n");
         }
     } while (p.qtd_disponivel < 0);
 
+    if (p.qtd_disponivel == 0) {
+        p.situacao = 2; // Temporariamente Indisponível
+        printf("-> Nota: Produto cadastrado com quantidade 0. Situacao definida automaticamente como 'Temporariamente Indisponivel'.\n");
+    } else {
+        p.situacao = 1; // Ativo
+    }
     // Quantidade minima nao pode ser negativa (Item 5 PDF)
     do {
         printf("Digite a quantidade minima recomendada: ");
-        scanf("%d", &p.qtd_minima);
+        if (scanf("%d", &p.qtd_minima) != 1) {
+            limparBuffer();
+            printf("Erro: Digite um numero inteiro valido!\n");
+            p.qtd_minima = -1;
+            continue;
+        }
+        limparBuffer();
 
         if (p.qtd_minima < 0) {
             printf("Erro: A quantidade minima nao pode ser negativa!\n");
@@ -368,17 +439,18 @@ do {
     // Valor unitario deve ser maior que zero (Item 5 PDF)
     do {
         printf("Digite o valor unitario (R$): ");
-        scanf("%f", &p.valor_unitario);
+        if (scanf("%f", &p.valor_unitario) != 1) {
+            limparBuffer();
+            printf("Erro: Digite um valor numerico valido!\n");
+            p.valor_unitario = 0.0f;
+            continue;
+        }
+        limparBuffer();
 
         if (p.valor_unitario <= 0) {
             printf("Erro: O valor deve ser maior que zero!\n");
         }
     } while (p.valor_unitario <= 0);
-
-    limparBuffer(); // Limpa o buffer residual para as proximas operacoes
-
-    // Situacao inicial padrao: 1 (Ativo)
-    p.situacao = 1;
 
     fseek(fPtr, (p.codigo - 1) * sizeof(Produto), SEEK_SET);
     fwrite(&p, sizeof(Produto), 1, fPtr);
@@ -409,6 +481,7 @@ void listarTodosProdutos(FILE *fPtr) {
 
 void exibirValorIndividualEstoque(FILE *fPtr){
     printf("\n--- VALOR INDIVIDUAL DE CADA PRODUTO EM ESTOQUE ---\n");
+    
     rewind(fPtr);
     Produto p;
     int encontrados = 0;
@@ -499,7 +572,6 @@ void consultarProdutoPorCodigo(FILE *fPtr) {
     // - SEEK_SET: Constante que indica que a contagem dos bytes deve começar do INÍCIO do arquivo.
     
     fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET);
-
     Produto p; // Declara variável do tipo 'Produto' na RAM para armazenar temporariamente o registro lido do disco
 
     // fread(destino, tamanho, quantidade, ponteiro_arquivo): Lê dados binários do arquivo.
@@ -544,8 +616,7 @@ void consultarProdutoPorNome(FILE *fPtr) {
     // Validação do campo de busca (Item 13)
     // strlen(termoBusca): Retorna a quantidade de caracteres da string.
     // Se for igual a 0, significa que o usuário apenas apertou Enter sem digitar nenhuma letra.
-    if (strlen(termoBusca) == 0) {
-    if (strlen(termoBusca) == 0) {
+    if (stringEstaEmBranco(termoBusca)) {
         printf("\nErro: O termo de busca nao pode ser vazio!\n");
         return;
     }
@@ -554,7 +625,6 @@ void consultarProdutoPorNome(FILE *fPtr) {
     // rewind(fPtr): Reposiciona o ponteiro de leitura do arquivo no início do arquivo (byte 0).
     // É o equivalente a chamar fseek(fPtr, 0, SEEK_SET).
     rewind(fPtr);
-
     Produto p;
     int encontrados = 0;
 
@@ -579,7 +649,7 @@ void consultarProdutoPorNome(FILE *fPtr) {
         printf("Total de registros encontrados: %d\n", encontrados);
     }
 }
-}
+
 
 // Solicita ao usuário qual situação filtrar (1 = Ativo, 2 = Indisponível,
 // 3 = Descontinuado) e percorre o arquivo listando apenas os correspondentes.
@@ -606,15 +676,14 @@ void consultarProdutosPorSituacao(FILE *fPtr) {
         return;
     }
 
-    // Reposiciona o ponteiro para o início do arquivo
+    // Reposiciona o ponteiro para o início do arquivo (byte 0)
     rewind(fPtr);
-
     Produto p;
     int encontrados = 0;
 
     // Vetor de ponteiros para string que mapeia a posição numérica no texto do cabeçalho
     // Posição 1 = "ATIVO", Posição 2 = "INDISPONÍVEL", Posição 3 = "DESCONTINUADO"
-    const char *rotulosSituacao[] = {"", "ATIVO", "INDISPONÍVEL", "DESCONTINUADO"};
+    const char *rotulosSituacao[] = {"", "ATIVO", "TEMPORARIAMENTE INDISPONÍVEL", "DESCONTINUADO"};
     printf("\n--- PRODUTOS NA SITUAÇÃO: %s ---\n", rotulosSituacao[situacaoDesejada]);
 
     // Percorre todos os registros do arquivon do início ao fim lendo 1 bloco por vez
@@ -633,4 +702,90 @@ void consultarProdutosPorSituacao(FILE *fPtr) {
     } else {
         printf("Total de produtos encontrados nesta situacao: %d\n", encontrados);
     }
+}
+
+void ordenarProdutosPorNome(FILE *fPtr) {
+    printf("\n--- PRODUTOS ORDENADOS POR NOME (A - Z) ---\n");
+
+    // Vetor temporário na memória RAM para armazenar apenas os produtos válidos
+    Produto lista[MAX_PRODUTOS];
+    int total = 0; 
+
+    rewind(fPtr);
+    Produto p;
+
+    //Lê registro por registro (bloco por bloco) do arquivo binário
+    while (fread(&p, sizeof(Produto), 1, fPtr) == 1) {
+        // Ignora posições vazias (p.codigo == 0 indica slot livre)
+        if (p.codigo != 0) {
+            lista[total] = p; // Copia a estrutura completa para a memória RAM
+            total++;          // Incrementa a quantidade de itens na lista
+        }
+    }
+    // Se o arquivo só tiver posições em branco, avisa o usuário e encerra a função
+    if (total == 0) {
+        printf("Nenhum produto cadastrado para ordenar.\n");
+        return;
+    }
+
+    // 3. BUBBLE SORT (Ordenação por Nome)
+    //laço externo: controla quantas passadas vão ser feitas no vetor
+    for (int i = 0; i < total - 1; i++) {
+        //laço interno: compara elementos vizinhos (j e j+1)
+        for (int j = 0; j < total - i - 1; j++) {
+            
+            // strcmp(str1, str2) compara duas strings caractere por caractere (tabela ASCII).
+            // Retorna um valor > 0 se a primeira string for "maior" (vier depois alfabeticamente).
+            // Exemplo: strcmp("Maquiagem", "Bolsas") traz um valor maior que 0.
+            if (strcmp(lista[j].nome, lista[j + 1].nome) > 0) {
+                // TROCA (SWAP): Troca a estrutura inteira de posição na memória RAM
+                Produto temp = lista[j];
+                lista[j] = lista[j + 1];
+                lista[j + 1] = temp;
+            }
+        }
+    }
+    for (int i = 0; i < total; i++) {
+        exibirLinhaProduto(lista[i]);
+    }
+    printf("\nTotal de produtos exibidos: %d\n", total);
+}
+
+void ordenarProdutosPorQuantidade(FILE *fPtr) {
+    printf("\n--- PRODUTOS ORDENADOS POR QUANTIDADE (CRESCENTE) ---\n");
+
+    Produto lista[MAX_PRODUTOS];
+    int total = 0;
+    rewind(fPtr);
+    Produto p;
+    
+    while (fread(&p, sizeof(Produto), 1, fPtr) == 1) {
+        if (p.codigo != 0) {
+            lista[total] = p;
+            total++;
+        }
+    }
+    if (total == 0) {
+        printf("Nenhum produto cadastrado para ordenar.\n");
+        return;
+    }
+    // BUBBLE SORT (Ordenação por Quantidade)
+    for (int i = 0; i < total - 1; i++) {
+        for (int j = 0; j < total - i - 1; j++) {
+            
+            // Comparação numérica simples: se a quantidade do elemento atual (j)
+            // for MAIOR que a do próximo elemento (j+1), eles estão fora de ordem crescente.
+            if (lista[j].qtd_disponivel > lista[j + 1].qtd_disponivel) {
+                // TROCA COMPLETA: Movemos a struct inteira para que o código,
+                // preço e nome continuem sincronizados com essa quantidade!
+                Produto temp = lista[j];
+                lista[j] = lista[j + 1];
+                lista[j + 1] = temp;
+            }
+        }
+    }
+    for (int i = 0; i < total; i++) {
+        exibirLinhaProduto(lista[i]);
+    }
+    printf("\nTotal de produtos exibidos: %d\n", total);
 }
