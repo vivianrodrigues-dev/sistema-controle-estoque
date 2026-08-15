@@ -100,8 +100,8 @@ int main(void) {
         printf("13. Exibir Valor Individual Armazenado por Produto\n");
         printf("14. Ordenar Produtos por Nome\n");
         printf("15. Ordenar Produtos por Quantidade\n");
-        printf("16. Relatorio de Totais por Categoria\n");
-        printf("17. Ordenar Produtos por Valor Unitario\n");
+        printf("16. Ordenar Produtos por Valor Unitario\n");
+        printf("17. Relatorio de Totais por Categoria\n");
         printf("18. Calcular Valor Total do Estoque Geral\n");
         printf("\n19. Sair do Sistema\n");
         printf("====================================\n");
@@ -135,21 +135,21 @@ int main(void) {
             case 7:
                 consultarProdutosPorSituacao(cfPtr);
                 break;
-            //case 8:
-                //consultarProdutosPorCategoria(cfPtr);
-               // break;
+            case 8:
+                consultarProdutosPorCategoria(cfPtr);
+                break;
             case 9:
                 consultarProdutosAbaixoDoMinimo(cfPtr);
                 break;
             case 10:
                 consultarProdutosSemEstoque(cfPtr);
                 break;
-            //case 11:
-               // buscarProdutoMaiorValorUnitario(cfPtr);
-               // break;
-           //case 12:
-               // buscarProdutoMaiorValorArmazenado(cfPtr);
-                //break;
+            case 11:
+                buscarProdutoMaiorValorUnitario(cfPtr);
+                break;
+           case 12:
+                buscarProdutoMaiorValorArmazenado(cfPtr);
+                break;
             case 13:
                 exibirValorIndividualEstoque(cfPtr);
                 break;
@@ -159,11 +159,11 @@ int main(void) {
             case 15:
                 ordenarProdutosPorQuantidade(cfPtr);
                 break;
-            //case 16:
-               // relatorioPorCategoria(cfPtr);
-               // break;
+            case 16:
+                ordenarProdutosPorValorUnitario(cfPtr);
+                break;
             //case 17:
-                //ordenarProdutosPorValorUnitario(cfPtr);
+                //relatorioPorCategoria(cfPtr);
                // break;
             case 18:
                 calcularValorTotalEstoque(cfPtr);
@@ -486,14 +486,14 @@ void exibirValorIndividualEstoque(FILE *fPtr){
     Produto p;
     int encontrados = 0;
 
-    while (fread(&p, sizeof(Produto), 1, fPtr) == 1) {
-        if (p.codigo != 0) {
+    while (fread(&p, sizeof(Produto), 1, fPtr) == 1){
+        if (p.codigo != 0){
             float total = p.qtd_disponivel * p.valor_unitario;
             exibirLinhaProduto(p);
             printf("   -> Valor Total em Estoque: R$ %.2f\n", total);
             encontrados++;
+        }
     }
-}
 }
 void calcularValorTotalEstoque(FILE *fPtr){
     rewind(fPtr);
@@ -502,8 +502,8 @@ void calcularValorTotalEstoque(FILE *fPtr){
     while (fread(&p, sizeof(Produto), 1, fPtr) == 1){ // Percorre o vetor de produtos, ou seja, todos os produtos cadastrados
         if (p.codigo != 0) {
         soma_total += (p.qtd_disponivel * p.valor_unitario); // Multiplica a quantidade pelo preço do produto atual e soma ao valor total acumulado
+        }
     }
-}
     printf("\n=======================================================\n");
     printf("\nVALOR TOTAL DE TODOS OS PRODUTOS EM ESTOQUE: R$ %.2f\n", soma_total);
     printf("\n=======================================================\n");
@@ -788,4 +788,256 @@ void ordenarProdutosPorQuantidade(FILE *fPtr) {
         exibirLinhaProduto(lista[i]);
     }
     printf("\nTotal de produtos exibidos: %d\n", total);
+}
+
+
+void registrarEntrada(FILE *fPtr){ // Função para registrar a entrada de produtos no estoque
+    printf("\n--- REGISTRAR ENTRADA DE PRODUTO ---\n");
+    int codigo, qtd_recebida;
+    printf("Digite o código do produto (1 a %d): ", MAX_PRODUTOS);
+    if (scanf("%d", &codigo) != 1){ // Lê o código digitado e verifica se o usuário digitou um número válido
+        limparBuffer();
+        printf("Erro: Entrada inválida!\n");
+        return;
+    }
+    limparBuffer();
+    if (codigo < 1 || codigo > MAX_PRODUTOS){ // Valida o limite do código
+        printf("Erro: Código fora do limite permitido (1 a %d)!\n", MAX_PRODUTOS);
+        return;
+    }
+    fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET); // Move o leitor do arquivo direto para onde o produto está salvo
+    Produto p; // Cria uma variável para guardar temporariamente os dados do produto
+    fread(&p, sizeof(Produto), 1, fPtr); // Lê as informações do produto diretamente do arquivo
+    if (p.codigo == 0){ // Verifica se o produto existe
+        printf("Erro: Produto inexistente!\n");
+        return;
+    }
+    if (p.situacao != 1){ // Verifica se o produto está ativo
+        printf("Erro: O produto '%s' não está ativo (Situação: %d). Movimentação bloqueada!\n", p.nome, p.situacao);
+        return;
+    }
+    printf("Digite a quantidade recebida: "); // Pede a quantidade recebida ao usuário
+    if (scanf("%d", &qtd_recebida) != 1){ // Lê a quantidade digitada e confirma se é um número válido
+        limparBuffer();
+        printf("Erro: Quantidade inválida!\n");
+        return;
+    }
+    limparBuffer();
+    if (qtd_recebida <= 0){ // Garante que a quantidade informada seja maior que zero
+        printf("Erro: A quantidade informada deve ser maior que zero!\n");
+        return;
+    }
+    int qtd_anterior = p.qtd_disponivel; // Salva a quantidade atual para exibir no comprovante final
+    p.qtd_disponivel += qtd_recebida; // Adiciona a nova quantidade ao estoque
+
+    fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET); // Volta o leitor do arquivo para a posição do produto
+    fwrite(&p, sizeof(Produto), 1, fPtr); // Salva os dados atualizados do produto no arquivo
+    fflush(fPtr); // Força a gravação imediata no disco para evitar perda de dados
+
+    printf("\n>>> ENTRADA REGISTRADA COM SUCESSO! <<<\n"); // Exibe o resumo da operação
+    printf("Produto: %s\n", p.nome);
+    printf("Quantidade anterior: %d\n", qtd_anterior);
+    printf("Quantidade recebida: %d\n", qtd_recebida);
+    printf("Nova quantidade disponível: %d\n", p.qtd_disponivel);
+}
+
+
+void registrarSaida(FILE *fPtr){// Função para registrar a saída de produtos do estoque
+    printf("\n--- REGISTRAR SAÍDA DE PRODUTO ---\n");
+    int codigo, qtd_retirada;
+    printf("Digite o código do produto (1 a %d): ", MAX_PRODUTOS);
+    if (scanf("%d", &codigo) != 1){ // Lê o código digitado e verifica se o usuário digitou um número válido
+        limparBuffer();
+        printf("Erro: Entrada inválida!\n");
+        return;
+    }
+    limparBuffer();
+    if (codigo < 1 || codigo > MAX_PRODUTOS){ // Valida o limite do código
+        printf("Erro: Código fora do limite permitido (1 a %d)!\n", MAX_PRODUTOS);
+        return;
+    }
+    fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET); // Move o leitor do arquivo direto para onde o produto está salvo
+    Produto p; // Cria uma variável para guardar temporariamente os dados do produto
+    fread(&p, sizeof(Produto), 1, fPtr); // Lê as informações do produto diretamente do arquivo
+    if (p.codigo == 0){ // Verifica se o produto existe
+        printf("Erro: Produto inexistente!\n");
+        return;
+    }
+    if (p.situacao != 1){ // Verifica se o produto está ativo
+        printf("Erro: O produto '%s' não está ativo (Situação: %d). Movimentação bloqueada!\n", p.nome, p.situacao);
+        return;
+    }
+    printf("Digite a quantidade a ser retirada: "); // Pede a quantidade a ser retirada ao usuário
+    if (scanf("%d", &qtd_retirada) != 1){ // Lê a quantidade digitada e confirma se é um número válido
+        limparBuffer();
+        printf("Erro: Quantidade inválida!\n");
+        return;
+    }
+    limparBuffer();
+    if (qtd_retirada <= 0){ // Garante que a quantidade informada seja maior que zero
+        printf("Erro: A quantidade informada deve ser maior que zero!\n");
+        return;
+    }
+    if (p.qtd_disponivel < qtd_retirada){ // Verifica se há quantidade suficiente em estoque para a retirada
+        printf("Erro: Quantidade insuficiente! Estoque atual: %d unidades.\n", p.qtd_disponivel);
+        return;
+    }
+    int qtd_anterior = p.qtd_disponivel; // Salva a quantidade atual para exibir no comprovante final
+    p.qtd_disponivel -= qtd_retirada; // Subtrai a quantidade retirada do estoque
+    if (p.qtd_disponivel == 0){ // Verifica se o estoque zerou
+        p.situacao = 2; // Altera o status para "Temporariamente Indisponível"
+        printf("-> Nota: O estoque zerou. Situação alterada para 'Temporariamente Indisponível'.\n");
+    }
+
+    fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET);  // Volta o leitor do arquivo para a posição do produto
+    fwrite(&p, sizeof(Produto), 1, fPtr); // Salva os dados atualizados do produto no arquivo
+    fflush(fPtr); // Força a gravação imediata no disco para evitar perda de dados
+
+    printf("\n>>> SAÍDA REGISTRADA COM SUCESSO! <<<\n");  // Exibe o resumo da operação
+    printf("Produto: %s\n", p.nome);
+    printf("Quantidade anterior: %d\n", qtd_anterior);
+    printf("Quantidade retirada: %d\n", qtd_retirada);
+    printf("Quantidade restante: %d\n", p.qtd_disponivel);
+}
+
+
+void ordenarProdutosPorValorUnitario(FILE *fPtr){ // Função para ordenar e listar produtos pelo preço unitário
+    printf("\n--- PRODUTOS ORDENADOS POR VALOR UNITÁRIO (CRESCENTE) ---\n");
+
+    int ordem; // Variável para guardar a escolha do tipo de ordenação (crescente ou decrescente)
+    printf("Escolha a ordem de exibiçãoo:\n");
+    printf("1. Crescente (Menor para o Maior)\n");
+    printf("2. Decrescente (Maior para o Menor)\n");
+    printf("Opção: "); // Pede ao usuário para escolher a ordem de exibição
+    
+    if (scanf("%d", &ordem) != 1 || (ordem != 1 && ordem != 2)){ // Lê a opção e valida se é válida (1 ou 2)
+        limparBuffer(); // Limpa o teclado caso a entrada seja inválida
+        printf("Erro: Opção inválida!\n");
+        return; // Cancela a operação e sai da função
+    }
+    limparBuffer(); // Limpa a memória temporária do teclado após a digitação
+
+    Produto lista[MAX_PRODUTOS]; // Cria uma lista temporária para guardar os produtos na memória
+    int total = 0; // Contador para saber quantos produtos válidos foram carregados
+    rewind(fPtr); // Volta o leitor do arquivo para o início para ler todos os produtos
+    Produto p; // Cria uma variável temporária para guardar os dados do produto lido
+    while (fread(&p, sizeof(Produto), 1, fPtr) == 1){ // Varre o arquivo lendo produto por produto até o final
+        if (p.codigo != 0){ // Ignora produtos excluídos ou posições vazias
+            lista[total] = p; // Copia o produto encontrado para a lista na memória
+            total++; // Incrementa o total de produtos carregados
+        }
+    }
+    if (total == 0){ // Verifica se nenhum produto válido foi encontrado no arquivo
+        printf("Nenhum produto cadastrado para ordenar.\n");
+        return; // Cancela a exibição e sai da função
+    }
+    // BUBBLE SORT (Ordenação por Valor Unitário)
+    for (int i = 0; i < total - 1; i++){ // Percorre a lista para realizar as rodadas de comparação
+        for (int j = 0; j < total - i - 1; j++){ // Compara os produtos vizinhos par a par
+            int precisaTrocar = 0; // Indicador de controle para saber se as posições devem ser trocadas
+            if (ordem == 1 && lista[j].valor_unitario > lista[j + 1].valor_unitario){ // Caso crescente: se o anterior for mais caro
+                precisaTrocar = 1; // Marca que os dois produtos devem trocar de lugar
+            } 
+            else if (ordem == 2 && lista[j].valor_unitario < lista[j + 1].valor_unitario){ // Caso decrescente: se o anterior for mais barato
+                precisaTrocar = 1; // Marca que os dois produtos devem trocar de lugar
+            }
+            if (precisaTrocar){ // Executa a troca de posição se necessário
+                Produto temp = lista[j]; // Guarda temporariamente o primeiro produto
+                lista[j] = lista[j + 1]; // Move o segundo produto para a posição do primeiro
+                lista[j + 1] = temp; // Coloca o primeiro produto na posição do segundo
+            }
+        }
+    }
+    printf("\n--- RESULTADO DA ORDENAÇÃO ---\n");
+    for (int i = 0; i < total; i++){ // Percorre a lista já organizada com todos os produtos
+        exibirLinhaProduto(lista[i]); // Imprime as informações do produto na tela
+    }
+    printf("\nTotal de produtos exibidos: %d\n", total); // Exibe a quantidade total de produtos mostrados
+}
+
+
+void consultarProdutosPorCategoria(FILE *fPtr){ // Função para buscar e listar produtos de uma categoria específica
+    char categoriaDesejada[50]; // Variável para armazenar o nome da categoria escolhida
+    selecionarCategoria(categoriaDesejada); // Exibe as opções e guarda a categoria escolhida pelo usuário
+    printf("\n--- PRODUTOS DA CATEGORIA: %s ---\n", categoriaDesejada); // Imprime o título da consulta na tela
+    rewind(fPtr); // Volta o leitor do arquivo para o início para começar a busca do zero
+    Produto p; // Cria uma variável temporária para guardar os dados de cada produto lido
+    int encontrados = 0; // Contador para saber quantos produtos da categoria foram localizados
+    while (fread(&p, sizeof(Produto), 1, fPtr) == 1){ // Varre o arquivo lendo produto por produto até o final
+        if (p.codigo != 0 && strcmp(p.categoria, categoriaDesejada) == 0){ // Verifica se o produto existe e pertence à categoria buscada
+            exibirLinhaProduto(p); // Exibe os dados do produto na tela
+            encontrados++; // Soma +1 no contador de produtos encontrados
+        }
+    }
+    if (encontrados == 0){ // Verifica se nenhum produto foi encontrado após percorrer todo o arquivo
+        printf("\nNenhum produto cadastrado na categoria '%s'.\n", categoriaDesejada);
+    } 
+    else{ // Caso tenha encontrado pelo menos um produto
+        printf("\nTotal de produtos encontrados: %d\n", encontrados); // Exibe a quantidade total de produtos localizados
+    }
+}
+
+
+void buscarProdutoMaiorValorUnitario(FILE *fPtr){ // Função para encontrar e exibir o produto mais caro do estoque
+    printf("\n--- PRODUTO(S) COM MAIOR VALOR UNITÁRIO ---\n");
+
+    rewind(fPtr); // Volta o leitor do arquivo para o início para começar a busca
+    Produto p; // Cria uma variável temporária para guardar os dados do produto lido
+    float maiorValor = 0.0f; // Guarda o maior preço encontrado até o momento
+    int encontrou = 0; // Indica se pelo menos um produto válido foi localizado
+    while (fread(&p, sizeof(Produto), 1, fPtr) == 1){ // Varre o arquivo lendo produto por produto até o final
+        if (p.codigo != 0){ // Ignora produtos excluídos ou posições vazias
+            if (!encontrou || p.valor_unitario > maiorValor){ // Se for o primeiro produto ou se for mais caro que o anterior
+                maiorValor = p.valor_unitario; // Atualiza o maior preço registrado
+                encontrou = 1; // Marca que encontrou ao menos um produto no arquivo
+            }
+        }
+    }
+    if (!encontrou){ // Verifica se não havia nenhum produto cadastrado
+        printf("Nenhum produto cadastrado no arquivo.\n");
+        return; // Cancela a exibição e sai da função (percebi agr que n precisava dessa explicação kkkkkk)
+    }
+    rewind(fPtr); // Rebobina o leitor para o início para reler os dados
+    printf("\n================ RESULTADO ENCONTRADO ================\n");
+    printf("Maior valor unitário registrado: R$ %.2f\n\n", maiorValor);
+    while (fread(&p, sizeof(Produto), 1, fPtr) == 1){ // Percorre o arquivo novamente para listar os produtos
+        if (p.codigo != 0 && p.valor_unitario == maiorValor){ // Filtra apenas os produtos que possuem o maior valor
+            exibirLinhaProduto(p); // Imprime as informações do produto na tela
+        }
+    }
+    printf("======================================================\n");
+}
+
+
+void buscarProdutoMaiorValorArmazenado(FILE *fPtr){ // Função para encontrar o produto com maior valor total acumulado no estoque
+    printf("\n--- PRODUTO(S) COM MAIOR VALOR TOTAL ARMAZENADO ---\n");
+    rewind(fPtr); // Volta o leitor do arquivo para o início para começar a busca
+    Produto p; // Cria uma variável temporária para guardar os dados do produto lido
+    float maiorValorTotal = 0.0f; // Guarda o maior valor em dinheiro total acumulado
+    int encontrou = 0; // Indica se pelo menos um produto válido foi localizado
+    while (fread(&p, sizeof(Produto), 1, fPtr) == 1){ // Varre o arquivo lendo produto por produto até o final
+        if (p.codigo != 0){ // Ignora produtos excluídos ou posições vazias
+            float valorTotalAtual = p.qtd_disponivel * p.valor_unitario; // Calcula o valor total do produto (quantidade x preço)
+            if (!encontrou || valorTotalAtual > maiorValorTotal){ // Se for o primeiro ou se tiver valor acumulado maior que o anterior
+                maiorValorTotal = valorTotalAtual; // Atualiza o maior valor total registrado
+                encontrou = 1; // Marca que encontrou ao menos um produto no arquivo
+            }
+        }
+    }
+    if (!encontrou){ // Verifica se não havia nenhum produto cadastrado
+        printf("Nenhum produto cadastrado no arquivo.\n");
+        return;
+    }
+    rewind(fPtr); // Rebobina o leitor para o início para reler os dados
+    printf("\n================ RESULTADO ENCONTRADO ================\n");
+    printf("Maior capital financeiro armazenado em um único produto: R$ %.2f\n\n", maiorValorTotal);
+    while (fread(&p, sizeof(Produto), 1, fPtr) == 1){ // Percorre o arquivo novamente para listar os produtos
+        if (p.codigo != 0){ // Ignora posições vazias na segunda varredura
+            float valorTotalAtual = p.qtd_disponivel * p.valor_unitario; // Recalcula o valor total acumulado deste produto
+            if (valorTotalAtual == maiorValorTotal){ // Filtra apenas os produtos que empataram com o maior valor total
+                exibirLinhaProduto(p); // Imprime as informações do produto na tela
+            }
+        }
+    }
+    printf("======================================================\n");
 }
