@@ -249,7 +249,7 @@ void selecionarCategoria(char *destino) {
     int catOpcao = 0;
 
     // 1. Imprime a lista de categorias apenas UMA VEZ no início
-    printf("\n--- SELEÇAO DE CATEGORIA ---\n");
+    printf("\n--- SELECAO DE CATEGORIA ---\n");
     for (int i = 0; i < MAX_CATEGORIAS; i++) {
         printf(" %2d. %s\n", i + 1, CATEGORIAS_VALIDAS[i]);
     }
@@ -417,12 +417,7 @@ do {
         }
     } while (p.qtd_disponivel < 0);
 
-    if (p.qtd_disponivel == 0) {
-        p.situacao = 2; // Temporariamente Indisponível
-        printf("-> Nota: Produto cadastrado com quantidade 0. Situacao definida automaticamente como 'Temporariamente Indisponivel'.\n");
-    } else {
-        p.situacao = 1; // Ativo
-    }
+    p.situacao = 1; // Todo produto novo começa como Ativo
     // Quantidade minima nao pode ser negativa (Item 5 PDF)
     do {
         printf("Digite a quantidade minima recomendada: ");
@@ -509,9 +504,9 @@ void calcularValorTotalEstoque(FILE *fPtr){
         soma_total += (p.qtd_disponivel * p.valor_unitario); // Multiplica a quantidade pelo preço do produto atual e soma ao valor total acumulado
         }
     }
-    printf("\n=======================================================\n");
+    printf("\n===========================================================\n");
     printf("\nVALOR TOTAL DE TODOS OS PRODUTOS EM ESTOQUE: R$ %.2f\n", soma_total);
-    printf("\n=======================================================\n");
+    printf("\n===========================================================\n");
 }
 void consultarProdutosSemEstoque(FILE *fPtr){
     printf("\n================================================================================================================\n");
@@ -854,9 +849,9 @@ void registrarEntrada(FILE *fPtr){ // Função para registrar a entrada de produ
         printf("Erro: Produto inexistente!\n");
         return;
     }
-    // Bloqueia apenas se estiver DESCONTINUADO (Situação 3)
-    if (p.situacao == 3){
-        printf("Erro: O produto '%s' esta DESCONTINUADO. Movimentacao bloqueada!\n", p.nome);
+    // A entrada só pode ser realizada para produtos Ativos
+    if (p.situacao != 1){ // Verifica se o produto está ativo
+        printf("Erro: O produto '%s' nao esta Ativo. Entrada bloqueada!\n", p.nome);
         return;
     }
     printf("Digite a quantidade recebida: "); // Pede a quantidade recebida ao usuário
@@ -873,13 +868,6 @@ void registrarEntrada(FILE *fPtr){ // Função para registrar a entrada de produ
     
     int qtd_anterior = p.qtd_disponivel; // Salva a quantidade atual para exibir no comprovante final
     p.qtd_disponivel += qtd_recebida; // Adiciona a nova quantidade ao estoque
-
-    // Se o produto estava zerado/indisponivel, reativa automaticamente
-    if (p.situacao == 2 && p.qtd_disponivel > 0) {
-        p.situacao = 1;
-        printf("-> Nota: O estoque foi reabastecido. Situacao alterada automaticamente para 'Ativo'.\n");
-    }
-
 
     fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET); // Volta o leitor do arquivo para a posição do produto
     fwrite(&p, sizeof(Produto), 1, fPtr); // Salva os dados atualizados do produto no arquivo
@@ -937,10 +925,6 @@ void registrarSaida(FILE *fPtr){// Função para registrar a saída de produtos 
     }
     int qtd_anterior = p.qtd_disponivel; // Salva a quantidade atual para exibir no comprovante final
     p.qtd_disponivel -= qtd_retirada; // Subtrai a quantidade retirada do estoque
-    if (p.qtd_disponivel == 0){ // Verifica se o estoque zerou
-        p.situacao = 2; // Altera o status para "Temporariamente Indisponível"
-        printf("-> Nota: O estoque zerou. Situação alterada para 'Temporariamente Indisponível'.\n");
-    }
 
     fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET);  // Volta o leitor do arquivo para a posição do produto
     fwrite(&p, sizeof(Produto), 1, fPtr); // Salva os dados atualizados do produto no arquivo
@@ -1091,7 +1075,7 @@ void buscarProdutoMaiorValorArmazenado(FILE *fPtr){ // Função para encontrar o
         return;
     }
     rewind(fPtr); // Rebobina o leitor para o início para reler os dados
-    printf("Maior capital financeiro armazenado em um único produto: R$ %.2f\n\n", maiorValorTotal);
+    printf("Maior capital financeiro armazenado em um unico produto: R$ %.2f\n\n", maiorValorTotal);
     while (fread(&p, sizeof(Produto), 1, fPtr) == 1){ // Percorre o arquivo novamente para listar os produtos
         if (p.codigo != 0){ // Ignora posições vazias na segunda varredura
             float valorTotalAtual = p.qtd_disponivel * p.valor_unitario; // Recalcula o valor total acumulado deste produto
@@ -1103,7 +1087,7 @@ void buscarProdutoMaiorValorArmazenado(FILE *fPtr){ // Função para encontrar o
     printf("======================================================\n");
 }
 void alterarProduto(FILE *fPtr) {
-    printf("\n--- ALTERAÇÃO DE PRODUTO ---\n");
+    printf("\n--- ALTERACAO DE PRODUTO ---\n");
     int codigo;
     printf("Digite o codigo do produto que deseja alterar (1 a %d): ", MAX_PRODUTOS);
     
@@ -1163,7 +1147,7 @@ void alterarProduto(FILE *fPtr) {
     }
 
     // 3. Alterar Quantidade Minima
-    printf("Deseja alterar a QUANTIDADE MÍNIMA? (S/N): ");
+    printf("Deseja alterar a QUANTIDADE MINIMA? (S/N): ");
     scanf(" %c", &opcao);
     limparBuffer();
     if (tolower((unsigned char)opcao) == 's') {
