@@ -242,6 +242,14 @@ int stringEstaEmBranco(const char *str) {
     }
     return 1;
 }
+// Retorna 1 se a string contiver algum numero/digito
+int contemNumeros(const char *str) {
+    while (*str) {
+        if (isdigit((unsigned char)*str)) return 1;
+        str++;
+    }
+    return 0;
+}
 
 // Exibe o menu de categorias e atribui a escolha por código 
 // Exibe o menu de categorias e atribui a escolha por código 
@@ -390,10 +398,12 @@ do {
         fgets(p.nome, 100, stdin);
         p.nome[strcspn(p.nome, "\n")] = '\0';
 
-        if (stringEstaEmBranco(p.nome)) {
-            printf("Erro: O nome do produto e obrigatorio!\n");
-        }
-    } while (stringEstaEmBranco(p.nome));
+      if (stringEstaEmBranco(p.nome)) {
+        printf("Erro: O nome do produto e obrigatorio!\n");
+    } else if (contemNumeros(p.nome)) {
+        printf("Erro: O nome do produto nao pode conter numeros!\n");
+    }
+} while (stringEstaEmBranco(p.nome) || contemNumeros(p.nome));
 
 // Converte o nome do produto para minúsculo como padrão
     paraMinusculo(p.nome);
@@ -418,22 +428,21 @@ do {
     } while (p.qtd_disponivel < 0);
 
     p.situacao = 1; // Todo produto novo começa como Ativo
-    // Quantidade minima nao pode ser negativa (Item 5 PDF)
-    do {
-        printf("Digite a quantidade minima recomendada: ");
-        if (scanf("%d", &p.qtd_minima) != 1) {
-            limparBuffer();
-            printf("Erro: Digite um numero inteiro valido!\n");
-            p.qtd_minima = -1;
-            continue;
-        }
+    // Quantidade minima nao pode ser negativa nem 0(Item 5 PDF)
+do {
+    printf("Digite a quantidade minima recomendada: ");
+    if (scanf("%d", &p.qtd_minima) != 1) {
         limparBuffer();
+        printf("Erro: Digite um numero inteiro valido!\n");
+        p.qtd_minima = 0;
+        continue;
+    }
+    limparBuffer();
 
-        if (p.qtd_minima < 0) {
-            printf("Erro: A quantidade minima nao pode ser negativa!\n");
-        }
-    } while (p.qtd_minima < 0);
-
+    if (p.qtd_minima <= 0) {
+        printf("Erro: A quantidade minima deve ser maior que zero (pelo menos 1)!\n");
+    }
+} while (p.qtd_minima <= 0);
     // Valor unitario deve ser maior que zero (Item 5 PDF)
     do {
         printf("Digite o valor unitario (R$): ");
@@ -624,7 +633,10 @@ void consultarProdutoPorNome(FILE *fPtr) {
         printf("\nErro: O termo de busca nao pode ser vazio!\n");
         return;
     }
-
+    if (contemNumeros(termoBusca)) {
+        printf("\nErro: A busca por nome nao pode conter numeros!\n");
+        return;
+    }
     // Reposiciona o ponteiro para o início do arquivo antes de iniciar a varredura
     // rewind(fPtr): Reposiciona o ponteiro de leitura do arquivo no início do arquivo (byte 0).
     // É o equivalente a chamar fseek(fPtr, 0, SEEK_SET).
@@ -1103,10 +1115,8 @@ void alterarProduto(FILE *fPtr) {
         return;
     }
 
-    // Posiciona e le o registro direto no arquivo
     fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET);
     Produto p;
-    // Le 1 estrutura 'Produto' da posição atual do arquivo e guarda na variável 'p'
     fread(&p, sizeof(Produto), 1, fPtr);
 
     if (p.codigo == 0) {
@@ -1118,14 +1128,19 @@ void alterarProduto(FILE *fPtr) {
     exibirLinhaProduto(p);
     printf("-------------------------------\n");
 
-    Produto pNovo = p; // Copia os dados atuais para alteracao gradual
+    Produto pNovo = p;
     char opcao;
 
     // 1. Alterar Nome
-    printf("\nDeseja alterar o NOME? (S/N): ");
-    scanf(" %c", &opcao);
-    limparBuffer();
-    if (tolower((unsigned char)opcao) == 's') {
+   do {
+        printf("\nDeseja alterar o NOME? (S/N): ");
+        scanf(" %c", &opcao);
+        limparBuffer();
+        opcao = (char)tolower((unsigned char)opcao);
+        if (opcao != 's' && opcao != 'n') printf("Opcao invalida! Digite apenas S ou N.\n");
+        } while (opcao != 's' && opcao != 'n');
+
+    if (opcao == 's') {
         do {
             printf("Digite o novo nome: ");
             fgets(pNovo.nome, sizeof(pNovo.nome), stdin);
@@ -1139,18 +1154,28 @@ void alterarProduto(FILE *fPtr) {
     }
 
     // 2. Alterar Categoria
-    printf("Deseja alterar a CATEGORIA? (S/N): ");
-    scanf(" %c", &opcao);
-    limparBuffer();
-    if (tolower((unsigned char)opcao) == 's') {
+    do {
+        printf("Deseja alterar a CATEGORIA? (S/N): ");
+        scanf(" %c", &opcao);
+        limparBuffer();
+        opcao = (char)tolower((unsigned char)opcao);
+        if (opcao != 's' && opcao != 'n') printf("Opcao invalida! Digite apenas S ou N.\n");
+    } while (opcao != 's' && opcao != 'n');
+
+    if (opcao == 's') {
         selecionarCategoria(pNovo.categoria);
     }
 
     // 3. Alterar Quantidade Minima
-    printf("Deseja alterar a QUANTIDADE MINIMA? (S/N): ");
-    scanf(" %c", &opcao);
-    limparBuffer();
-    if (tolower((unsigned char)opcao) == 's') {
+    do {
+        printf("Deseja alterar a QUANTIDADE MINIMA? (S/N): ");
+        scanf(" %c", &opcao);
+        limparBuffer();
+        opcao = (char)tolower((unsigned char)opcao);
+        if (opcao != 's' && opcao != 'n') printf("Opcao invalida! Digite apenas S ou N.\n");
+    } while (opcao != 's' && opcao != 'n');
+
+    if (opcao == 's') {
         do {
             printf("Digite a nova quantidade minima: ");
             if (scanf("%d", &pNovo.qtd_minima) != 1 || pNovo.qtd_minima < 0) {
@@ -1164,10 +1189,15 @@ void alterarProduto(FILE *fPtr) {
     }
 
     // 4. Alterar Valor Unitario
-    printf("Deseja alterar o VALOR UNITARIO? (S/N): ");
-    scanf(" %c", &opcao);
-    limparBuffer();
-    if (tolower((unsigned char)opcao) == 's') {
+    do {
+        printf("Deseja alterar o VALOR UNITARIO? (S/N): ");
+        scanf(" %c", &opcao);
+        limparBuffer();
+        opcao = (char)tolower((unsigned char)opcao);
+        if (opcao != 's' && opcao != 'n') printf("Opcao invalida! Digite apenas S ou N.\n");
+    } while (opcao != 's' && opcao != 'n');
+
+    if (opcao == 's') {
         do {
             printf("Digite o novo valor unitario (R$): ");
             if (scanf("%f", &pNovo.valor_unitario) != 1 || pNovo.valor_unitario <= 0) {
@@ -1181,10 +1211,15 @@ void alterarProduto(FILE *fPtr) {
     }
 
     // 5. Alterar Situacao
-    printf("Deseja alterar a SITUACAO? (S/N): ");
-    scanf(" %c", &opcao);
-    limparBuffer();
-    if (tolower((unsigned char)opcao) == 's') {
+    do {
+        printf("Deseja alterar a SITUACAO? (S/N): ");
+        scanf(" %c", &opcao);
+        limparBuffer();
+        opcao = (char)tolower((unsigned char)opcao);
+        if (opcao != 's' && opcao != 'n') printf("Opcao invalida! Digite apenas S ou N.\n");
+    } while (opcao != 's' && opcao != 'n');
+
+    if (opcao == 's') {
         int novaSit = 0;
         do {
             printf("\nEscolha a nova situacao:\n");
@@ -1203,27 +1238,30 @@ void alterarProduto(FILE *fPtr) {
         pNovo.situacao = novaSit;
     }
 
-    // Confirmacao Final antes de salvar no arquivo
+    // Confirmacao Final
     printf("\n====================================\n");
     printf("     RESUMO DAS ALTERACOES          \n");
     printf("====================================\n");
     exibirLinhaProduto(pNovo);
     printf("====================================\n");
-    printf("Deseja CONFIRMAR e salvar estas alteracoes? (S/N): ");
-    scanf(" %c", &opcao);
-    limparBuffer();
 
-    if (tolower((unsigned char)opcao) == 's') {
-        // Reposiciona o ponteiro do arquivo de volta na posição correta antes de escrever
+    do {
+        printf("Deseja CONFIRMAR e salvar estas alteracoes? (S/N): ");
+        scanf(" %c", &opcao);
+        limparBuffer();
+        opcao = (char)tolower((unsigned char)opcao);
+        if (opcao != 's' && opcao != 'n') printf("Opcao invalida! Digite apenas S ou N.\n");
+    } while (opcao != 's' && opcao != 'n');
+
+    if (opcao == 's') {
         fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET);
-        // Sobrescreve o registro antigo no arquivo binário com os dados atualizados
         fwrite(&pNovo, sizeof(Produto), 1, fPtr);
-        // Descarrega o buffer da RAM para o disco imediatamente
-        fflush(fPtr); // Garante que foi salvo fisicamente
+        fflush(fPtr);
         printf("\n>>> SUCESSO: Produto alterado com exito! <<<\n");
     } else {
         printf("\n>>> Operacao cancelada. Nenhuma alteracao foi salva. <<<\n");
     }
+
 }
 void excluirOuDescontinuarProduto(FILE *fPtr) {
     printf("\n--- EXCLUIR OU DESCONTINUAR PRODUTO ---\n");
@@ -1260,10 +1298,14 @@ void excluirOuDescontinuarProduto(FILE *fPtr) {
     if (p.qtd_disponivel > 0) {
         printf("\n[BLOQUEIO]: O produto ainda possui %d unidade(s) em estoque!\n", p.qtd_disponivel);
         printf("A exclusao definitiva NAO e permitida enquanto houver estoque.\n\n");
-        printf("Deseja marcar este produto como 'DESCONTINUADO'? (S/N): ");
         char op;
+    do {
+        printf("Deseja marcar este produto como 'DESCONTINUADO'? (S/N): ");
         scanf(" %c", &op);
         limparBuffer();
+        op = (char)tolower((unsigned char)op);
+        if (op != 's' && op != 'n') printf("Opcao invalida! Digite apenas S ou N.\n");
+        } while (op != 's' && op != 'n');
 
         if (tolower((unsigned char)op) == 's') {
             p.situacao = 3; // Descontinuado
@@ -1293,13 +1335,16 @@ void excluirOuDescontinuarProduto(FILE *fPtr) {
     }
 
     char confirma;
-    if (opcao == 1) {
-        printf("\nTem certeza que deseja EXCLUIR DEFINITIVAMENTE o produto '%s'? (S/N): ", p.nome);
-        scanf(" %c", &confirma);
-        limparBuffer();
+   if (opcao == 1) {
+        do {
+            printf("\nTem certeza que deseja EXCLUIR DEFINITIVAMENTE o produto '%s'? (S/N): ", p.nome);
+            scanf(" %c", &confirma);
+            limparBuffer();
+            confirma = (char)tolower((unsigned char)confirma);
+            if (confirma != 's' && confirma != 'n') printf("Opcao invalida! Digite apenas S ou N.\n");
+        } while (confirma != 's' && confirma != 'n');
 
-        if (tolower((unsigned char)confirma) == 's') {
-            // Cria um registro zerado para sobrescrever o slot
+        if (confirma == 's') {
             Produto produtoVazio = {0, "", "", 0, 0, 0.0f, 0};
             fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET);
             fwrite(&produtoVazio, sizeof(Produto), 1, fPtr);
@@ -1309,11 +1354,15 @@ void excluirOuDescontinuarProduto(FILE *fPtr) {
             printf("\n>>> Exclusao cancelada. <<<\n");
         }
     } else if (opcao == 2) {
-        printf("\nTem certeza que deseja marcar o produto como DESCONTINUADO? (S/N): ");
-        scanf(" %c", &confirma);
-        limparBuffer();
+        do {
+            printf("\nTem certeza que deseja marcar o produto como DESCONTINUADO? (S/N): ");
+            scanf(" %c", &confirma);
+            limparBuffer();
+            confirma = (char)tolower((unsigned char)confirma);
+            if (confirma != 's' && confirma != 'n') printf("Opcao invalida! Digite apenas S ou N.\n");
+        } while (confirma != 's' && confirma != 'n');
 
-        if (tolower((unsigned char)confirma) == 's') {
+        if (confirma == 's') {
             p.situacao = 3; // Descontinuado
             fseek(fPtr, (codigo - 1) * sizeof(Produto), SEEK_SET);
             fwrite(&p, sizeof(Produto), 1, fPtr);
